@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RASKAM Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono&display=swap');
+        
+        :root {
+            --bg-main: #020617;
+            --bg-glass: rgba(255, 255, 255, 0.03);
+            --border-glass: rgba(255, 255, 255, 0.05);
+            --text-main: #cbd5e1;
+            --text-heading: #ffffff;
+            --accent-color: #4f46e5;
+            --accent-glow: rgba(79, 70, 229, 0.2);
+        }
+
+        [data-theme="light"] {
+            --bg-main: #f8fafc;
+            --bg-glass: rgba(0, 0, 0, 0.03);
+            --border-glass: rgba(0, 0, 0, 0.1);
+            --text-main: #334155;
+            --text-heading: #0f172a;
+        }
+
+        [data-theme="midnight"] {
+            --bg-main: #000000;
+            --bg-glass: rgba(30, 41, 59, 0.5);
+            --border-glass: rgba(255, 255, 255, 0.03);
+        }
+
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-main); color: var(--text-main); transition: background-color 0.3s ease; }
+        .font-mono { font-family: 'JetBrains+Mono', monospace; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .glass { background: var(--bg-glass); backdrop-filter: blur(12px); border: 1px solid var(--border-glass); }
+        
+        iframe { border: none; background: white; width: 100%; height: 100%; }
+        
+        .active-nav { background: var(--accent-glow); border-color: var(--accent-color); color: var(--text-heading); }
+        .text-accent { color: var(--accent-color); }
+        .bg-accent { background-color: var(--accent-color); }
+        
+        #toast {
+            position: fixed; bottom: 20px; right: 20px; 
+            padding: 12px 20px; border-radius: 12px;
+            background: #1e293b; color: white; border: 1px solid rgba(255,255,255,0.1);
+            transform: translateY(100px); transition: transform 0.3s ease; z-index: 1000;
+        }
+        #toast.show { transform: translateY(0); }
+
+        .color-swatch { width: 24px; height: 24px; border-radius: 6px; cursor: pointer; transition: transform 0.2s; }
+        .color-swatch:hover { transform: scale(1.1); }
+        .color-swatch.active { ring: 2px solid white; ring-offset: 2px; }
+
+        /* Custom Monogram Styles */
+        .monogram-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--accent-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex overflow-hidden">
+
+    <!-- Sidebar Left: Tools -->
+    <aside class="w-64 border-r border-white/5 flex flex-col p-4 space-y-4 glass z-20">
+        <div class="flex items-center gap-3 px-2 mb-2">
+            <div class="monogram-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 20V4H12C15.3137 4 18 6.68629 18 10C18 12.8358 16.0339 15.212 13.3503 15.8231L18 20H14.5L10.5 16H8V20H4ZM8 12H12C13.1046 12 14 11.1046 14 10C14 8.89543 13.1046 8 12 8H8V12Z" fill="white"/>
+                </svg>
+            </div>
+            <h1 class="text-sm font-black tracking-widest text-heading uppercase" style="color: var(--text-heading)">RASKAM</h1>
+        </div>
+
+        <div class="flex-1 space-y-4 overflow-y-auto no-scrollbar pr-1">
+            <!-- Calendar Widget -->
+            <div class="bg-white/5 rounded-2xl p-3 border border-white/5 shadow-sm">
+                <div id="calendar-header" class="text-[10px] font-bold text-accent uppercase tracking-wider mb-2 flex justify-between">
+                    <span id="cal-month-year"></span>
+                </div>
+                <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center"></div>
+            </div>
+
+            <!-- Calculator Widget -->
+            <div class="bg-white/5 rounded-2xl p-3 border border-white/5 shadow-sm">
+                <div class="text-right mb-2 pr-1">
+                    <div id="calc-eq" class="text-[9px] text-slate-500 font-mono truncate h-3">0</div>
+                    <div id="calc-display" class="text-lg font-bold text-heading truncate" style="color: var(--text-heading)">0</div>
+                </div>
+                <div class="grid grid-cols-4 gap-1" id="calc-btns"></div>
+            </div>
+
+            <!-- Unit Converter -->
+            <div class="bg-white/5 rounded-2xl p-3 border border-white/5 shadow-sm">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-ruler-combined text-[12px] text-accent"></i>
+                    <span class="text-[9px] font-black uppercase text-slate-500 tracking-widest">Measure</span>
+                </div>
+                <div class="flex gap-1 mb-1">
+                    <input type="number" id="unit-input" placeholder="Val" class="w-full bg-black/20 border border-white/5 rounded-lg px-2 py-1 text-[10px] font-bold text-heading outline-none" style="color: var(--text-heading)">
+                    <select id="unit-from" class="bg-black/20 border border-white/5 rounded-lg text-[9px] font-bold text-slate-400 outline-none p-1">
+                        <option value="ft">FT</option>
+                        <option value="in">IN</option>
+                        <option value="m">M</option>
+                    </select>
+                </div>
+                <div id="unit-result" class="text-[9px] font-mono text-accent bg-white/5 rounded-lg py-1 px-2 truncate">Result</div>
+            </div>
+        </div>
+
+        <div class="pt-3 border-t border-white/5">
+            <button onclick="toggleSettings()" class="w-full p-2.5 bg-white/5 border border-white/5 rounded-xl flex items-center justify-center gap-2 hover:bg-white/10 transition-all">
+                <i class="fas fa-cog text-sm"></i>
+                <span class="text-[10px] font-bold uppercase tracking-wider">Dashboard Settings</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col relative z-10">
+        <header class="h-14 border-b border-white/5 flex items-center justify-between px-6 glass">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <i id="current-icon" class="fas fa-globe text-accent"></i>
+                <span id="current-url-display" class="text-xs font-semibold text-slate-400 truncate max-w-[400px]">Loading...</span>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="analyzeSite()" class="px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-lg flex items-center gap-2 hover:bg-accent/20 transition-colors">
+                    <i class="fas fa-sparkles text-accent"></i>
+                    <span class="text-[10px] font-black uppercase">Analyze</span>
+                </button>
+                <button onclick="refreshFrame()" class="p-2 hover:bg-white/5 rounded-lg text-slate-400"><i class="fas fa-sync-alt text-xs"></i></button>
+                <button onclick="openExternal()" class="p-2 hover:bg-white/5 rounded-lg text-slate-400"><i class="fas fa-expand text-xs"></i></button>
+            </div>
+        </header>
+        <div class="flex-1 relative bg-slate-950/20">
+            <iframe id="main-frame" src="about:blank"></iframe>
+            
+            <div id="ai-panel" class="hidden absolute top-4 right-4 w-80 bg-slate-900/95 backdrop-blur-2xl border border-accent/30 rounded-2xl p-4 shadow-2xl z-50">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2 text-accent">
+                        <i class="fas fa-brain"></i>
+                        <span class="text-[10px] font-black uppercase">Gemini Analysis</span>
+                    </div>
+                    <button onclick="toggleAi()" class="text-slate-500 hover:text-white"><i class="fas fa-times text-xs"></i></button>
+                </div>
+                <div id="ai-content" class="text-[11px] leading-relaxed text-slate-300 max-h-64 overflow-y-auto no-scrollbar">Researching...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Sidebar Right -->
+    <aside class="w-80 border-l border-white/5 flex flex-col glass z-20">
+        <div class="p-4 border-b border-white/5">
+            <h3 class="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">Navigation Slots</h3>
+            <div class="space-y-2" id="nav-slots"></div>
+        </div>
+
+        <div class="flex-1 flex flex-col p-4 overflow-hidden">
+            <div class="flex items-center justify-between mb-2 px-1">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-file-alt text-accent"></i>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Scratchpad</span>
+                </div>
+                <div class="flex gap-1">
+                    <button onclick="toggleHistory()" class="p-1.5 rounded-lg text-slate-500 hover:bg-white/5" title="History"><i class="fas fa-history"></i></button>
+                    <button id="save-note-btn" onclick="saveNotes()" class="p-1.5 rounded-lg text-slate-500 hover:text-accent" title="Save Now"><i class="fas fa-save"></i></button>
+                </div>
+            </div>
+            
+            <div class="flex-1 relative overflow-hidden flex flex-col">
+                <textarea id="scratchpad" class="flex-1 bg-white/5 rounded-2xl p-4 text-[11px] font-mono resize-none focus:outline-none border border-white/5 text-slate-300 focus:border-accent/30 transition-all" placeholder="Capture thoughts..."></textarea>
+                
+                <div id="history-panel" class="hidden absolute inset-0 bg-[#0f172a] rounded-2xl border border-white/5 overflow-y-auto no-scrollbar p-3 space-y-2">
+                    <div class="flex justify-between items-center mb-2 px-1">
+                        <span class="text-[10px] font-bold text-slate-500">RECENT SAVES</span>
+                        <button onclick="toggleHistory()" class="text-slate-500 hover:text-white"><i class="fas fa-times text-xs"></i></button>
+                    </div>
+                    <div id="history-list" class="space-y-2"></div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-sm">
+        <div class="w-full max-w-xl bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
+            <h3 class="text-xl font-bold mb-6 text-white flex items-center gap-2"><i class="fas fa-cog text-accent"></i> Dashboard Settings</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Portal Setup -->
+                <div class="space-y-4">
+                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5 pb-2">Portals</h4>
+                    <div class="space-y-4" id="settings-inputs"></div>
+                </div>
+
+                <!-- Appearance Setup -->
+                <div class="space-y-6">
+                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5 pb-2">Appearance</h4>
+                    
+                    <div class="space-y-3">
+                        <label class="text-[10px] font-bold text-slate-400">THEME</label>
+                        <div class="flex gap-2 p-1 bg-black/20 rounded-xl">
+                            <button onclick="setTheme('dark')" id="theme-dark" class="flex-1 py-2 text-[10px] font-bold rounded-lg transition-all">DARK</button>
+                            <button onclick="setTheme('light')" id="theme-light" class="flex-1 py-2 text-[10px] font-bold rounded-lg transition-all">LIGHT</button>
+                            <button onclick="setTheme('midnight')" id="theme-midnight" class="flex-1 py-2 text-[10px] font-bold rounded-lg transition-all">MIDNIGHT</button>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <label class="text-[10px] font-bold text-slate-400">ACCENT COLOR</label>
+                        <div class="flex flex-wrap gap-3" id="accent-picker">
+                            <div onclick="setAccent('#4f46e5')" class="color-swatch bg-[#4f46e5]" title="Indigo"></div>
+                            <div onclick="setAccent('#0ea5e9')" class="color-swatch bg-[#0ea5e9]" title="Sky"></div>
+                            <div onclick="setAccent('#10b981')" class="color-swatch bg-[#10b981]" title="Emerald"></div>
+                            <div onclick="setAccent('#f59e0b')" class="color-swatch bg-[#f59e0b]" title="Amber"></div>
+                            <div onclick="setAccent('#ef4444')" class="color-swatch bg-[#ef4444]" title="Rose"></div>
+                            <div onclick="setAccent('#a855f7')" class="color-swatch bg-[#a855f7]" title="Purple"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-8 flex gap-3">
+                <button onclick="toggleSettings()" class="flex-1 py-3 text-xs font-bold text-slate-500 hover:text-white transition-colors">Cancel</button>
+                <button onclick="applySettings()" class="flex-[2] py-3 bg-accent text-white font-bold rounded-2xl text-xs shadow-lg hover:brightness-110 transition-all">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast">Changes saved.</div>
+
+    <script>
+        // Mapping of common domains to icons and descriptive titles
+        const DOMAIN_MAP = {
+            'wikipedia.org': { title: 'Wikipedia', icon: 'fa-globe' },
+            'tamildailycalendar.com': { title: 'Tamil Calendar', icon: 'fa-calendar-alt' },
+            'deccanherald.com': { title: 'Deccan Herald', icon: 'fa-newspaper' },
+            'akashvani.gov.in': { title: 'Vividh Bharati', icon: 'fa-radio' },
+            'youtube.com': { title: 'YouTube', icon: 'fa-play-circle' },
+            'github.com': { title: 'GitHub', icon: 'fa-code-branch' },
+            'google.com': { title: 'Google', icon: 'fa-search' },
+            'reddit.com': { title: 'Reddit', icon: 'fa-comments' },
+            'twitter.com': { title: 'Twitter', icon: 'fa-hashtag' },
+            'x.com': { title: 'Twitter', icon: 'fa-hashtag' }
+        };
+
+        const DEFAULT_STATE = {
+            sites: [
+                "https://www.tamildailycalendar.com/tamil_daily_calendar.php",
+                "https://en.wikipedia.org/wiki/Main_Page",
+                "https://www.deccanherald.com/top-karnataka-news",
+                "https://akashvani.gov.in/radio/live.php"
+            ],
+            titles: ["Tamil Calendar", "Wikipedia", "Deccan Herald", "Vividh Bharati"],
+            icons: ["fa-calendar-alt", "fa-globe", "fa-newspaper", "fa-radio"],
+            activeIdx: 0,
+            notes: "",
+            history: [],
+            theme: 'dark',
+            accent: '#4f46e5'
+        };
+
+        let state = JSON.parse(localStorage.getItem('omni_dashboard_state')) || DEFAULT_STATE;
+
+        // Backward compatibility for existing localstorage
+        if (!state.icons) {
+            state.icons = ["fa-calendar-alt", "fa-globe", "fa-newspaper", "fa-radio"];
+        }
+
+        function updateState() {
+            localStorage.setItem('omni_dashboard_state', JSON.stringify(state));
+        }
+
+        function getInfoFromUrl(url) {
+            try {
+                const domain = new URL(url).hostname.replace('www.', '');
+                if (DOMAIN_MAP[domain]) return DOMAIN_MAP[domain];
+                
+                // Generic fallback
+                const name = domain.split('.')[0];
+                return { 
+                    title: name.charAt(0).toUpperCase() + name.slice(1), 
+                    icon: 'fa-link' 
+                };
+            } catch {
+                return { title: 'Custom Portal', icon: 'fa-globe' };
+            }
+        }
+
+        function applyThemeStyles() {
+            document.body.setAttribute('data-theme', state.theme);
+            document.documentElement.style.setProperty('--accent-color', state.accent);
+            document.documentElement.style.setProperty('--accent-glow', `${state.accent}33`);
+            
+            ['dark', 'light', 'midnight'].forEach(t => {
+                const btn = document.getElementById(`theme-${t}`);
+                if(btn) {
+                    btn.className = state.theme === t 
+                        ? "flex-1 py-2 text-[10px] font-bold rounded-lg bg-accent text-white" 
+                        : "flex-1 py-2 text-[10px] font-bold rounded-lg text-slate-500 hover:text-white";
+                }
+            });
+        }
+
+        window.setTheme = (t) => {
+            state.theme = t;
+            applyThemeStyles();
+        };
+
+        window.setAccent = (hex) => {
+            state.accent = hex;
+            applyThemeStyles();
+        };
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            if (msg) t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2000);
+        }
+
+        window.setActiveSite = (idx) => {
+            const isVividh = state.titles[idx].toLowerCase().includes("vividh bharati");
+            if (isVividh) {
+                window.open(state.sites[idx], '_blank');
+                return;
+            }
+
+            state.activeIdx = idx;
+            const frame = document.getElementById('main-frame');
+            frame.src = state.sites[idx];
+            document.getElementById('current-url-display').textContent = state.sites[idx];
+            
+            document.getElementById('current-icon').className = `fas ${state.icons[idx] || 'fa-globe'} text-accent`;
+            
+            updateState();
+            renderNav();
+        };
+
+        window.refreshFrame = () => {
+            const frame = document.getElementById('main-frame');
+            frame.src = frame.src;
+        };
+
+        window.openExternal = () => {
+            window.open(state.sites[state.activeIdx], '_blank');
+        };
+
+        function renderNav() {
+            const container = document.getElementById('nav-slots');
+            container.innerHTML = '';
+
+            state.sites.forEach((site, i) => {
+                const isVividh = state.titles[i].toLowerCase().includes("vividh bharati");
+                const isActive = !isVividh && state.activeIdx === i;
+                
+                const btn = document.createElement('button');
+                btn.className = `w-full flex items-center justify-between p-3 rounded-xl border transition-all ${isActive ? 'active-nav' : 'bg-white/5 border-transparent text-slate-400 hover:bg-white/10'}`;
+                btn.onclick = () => setActiveSite(i);
+                
+                btn.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="p-1.5 rounded-lg flex-shrink-0 ${isActive ? 'bg-accent text-white' : 'bg-slate-700 text-slate-300'}">
+                            <i class="fas ${state.icons[i] || 'fa-globe'} text-[10px]"></i>
+                        </div>
+                        <span class="text-[11px] font-bold truncate">${state.titles[i] || 'Portal'}</span>
+                    </div>
+                    <i class="fas ${isVividh ? 'fa-external-link-alt' : 'fa-chevron-right'} text-[10px] ${isActive || isVividh ? 'opacity-100' : 'opacity-0'}"></i>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function initCalendar() {
+            const now = new Date();
+            const grid = document.getElementById('calendar-grid');
+            const header = document.getElementById('cal-month-year');
+            header.textContent = now.toLocaleString('default', { month: 'short', year: 'numeric' });
+            grid.innerHTML = '';
+            ['S','M','T','W','T','F','S'].forEach(d => {
+                const el = document.createElement('div');
+                el.className = 'text-[8px] text-slate-500 font-black';
+                el.textContent = d;
+                grid.appendChild(el);
+            });
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            for(let i=0; i<firstDay; i++) grid.appendChild(document.createElement('div'));
+            for(let i=1; i<=daysInMonth; i++) {
+                const day = document.createElement('div');
+                const isToday = i === now.getDate();
+                day.className = `text-[9px] p-0.5 rounded-md cursor-default ${isToday ? 'bg-accent text-white font-bold' : 'text-slate-400 hover:text-white'}`;
+                day.textContent = i;
+                grid.appendChild(day);
+            }
+        }
+
+        function initCalc() {
+            const display = document.getElementById('calc-display');
+            const eq = document.getElementById('calc-eq');
+            const btns = ['7','8','9','/','4','5','6','*','1','2','3','-','0','.','=','C'];
+            const container = document.getElementById('calc-btns');
+            let currentEq = "";
+            btns.forEach(b => {
+                const btn = document.createElement('button');
+                btn.className = 'h-7 rounded-lg text-[10px] font-bold bg-white/5 hover:bg-accent text-slate-300 hover:text-white transition-all';
+                btn.textContent = b;
+                btn.onclick = () => {
+                    if (b === 'C') { currentEq = ""; display.textContent = "0"; eq.textContent = "0"; }
+                    else if (b === '=') {
+                        try { 
+                            const res = eval(currentEq.replace(/[^-+*/.0-9]/g, ''));
+                            display.textContent = res;
+                            currentEq = res.toString();
+                        } catch { display.textContent = "Err"; }
+                    } else {
+                        currentEq += b;
+                        display.textContent = currentEq;
+                        eq.textContent = currentEq;
+                    }
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        window.saveNotes = () => {
+            const content = document.getElementById('scratchpad').value;
+            if (!content.trim()) return;
+            state.notes = content;
+            state.history.unshift({ id: Date.now(), content, timestamp: Date.now() });
+            state.history = state.history.slice(0, 20);
+            updateState();
+            renderHistory();
+            showToast("Note captured.");
+        };
+
+        window.deleteNote = (e, id) => {
+            e.stopPropagation();
+            state.history = state.history.filter(item => item.id !== id);
+            updateState();
+            renderHistory();
+            showToast("Note deleted.");
+        };
+
+        window.toggleHistory = () => document.getElementById('history-panel').classList.toggle('hidden');
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            if (state.history.length === 0) {
+                list.innerHTML = '<div class="text-[10px] text-slate-600 text-center py-8 italic">No saved notes</div>';
+                return;
+            }
+            state.history.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'group p-3 bg-white/5 rounded-xl hover:bg-white/10 border border-white/5 transition-all cursor-pointer relative';
+                div.onclick = () => {
+                    document.getElementById('scratchpad').value = item.content;
+                    state.notes = item.content;
+                    toggleHistory();
+                };
+                div.innerHTML = `
+                    <div class="flex justify-between mb-1 items-start">
+                        <span class="text-[8px] text-slate-500">${new Date(item.timestamp).toLocaleString()}</span>
+                        <div class="flex gap-2">
+                            <i class="fas fa-undo text-[10px] text-accent opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                            <button onclick="deleteNote(event, ${item.id})" class="text-slate-500 hover:text-red-400 transition-colors">
+                                <i class="fas fa-trash-alt text-[10px]"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-slate-400 line-clamp-2 pr-4">${item.content}</p>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        window.toggleSettings = () => {
+            const modal = document.getElementById('settings-modal');
+            const inputs = document.getElementById('settings-inputs');
+            modal.classList.toggle('hidden');
+            if(!modal.classList.contains('hidden')) {
+                inputs.innerHTML = '';
+                state.sites.forEach((s, i) => {
+                    inputs.innerHTML += `
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center gap-2 pl-1 mb-1">
+                                <i class="fas ${state.icons[i]} text-[9px] text-accent"></i>
+                                <label class="text-[9px] font-black uppercase text-slate-500">Slot ${i+1}: ${state.titles[i]}</label>
+                            </div>
+                            <input type="url" class="site-input w-full px-4 py-2.5 bg-slate-800 border border-white/5 rounded-xl text-xs font-mono text-slate-300 focus:border-accent/50 outline-none" value="${s}" placeholder="https://...">
+                        </div>
+                    `;
+                });
+                applyThemeStyles();
+            }
+        };
+
+        window.applySettings = () => {
+            const inputs = document.querySelectorAll('.site-input');
+            const newSites = Array.from(inputs).map(i => i.value);
+            
+            // Auto-update titles and icons based on new sites
+            newSites.forEach((url, i) => {
+                if (url !== state.sites[i]) {
+                    const info = getInfoFromUrl(url);
+                    state.sites[i] = url;
+                    state.titles[i] = info.title;
+                    state.icons[i] = info.icon;
+                }
+            });
+
+            updateState();
+            renderNav();
+            toggleSettings();
+            setActiveSite(state.activeIdx);
+            showToast("Navigation updated.");
+        };
+
+        window.analyzeSite = async () => {
+            const panel = document.getElementById('ai-panel');
+            const content = document.getElementById('ai-content');
+            panel.classList.remove('hidden');
+            content.textContent = "Requesting analysis of " + state.titles[state.activeIdx] + "...";
+            setTimeout(() => {
+                content.innerHTML = `
+                    <div class='mb-2 font-bold text-accent'>Analysis Summary:</div>
+                    Currently viewing ${state.titles[state.activeIdx]}. This portal provides real-time data for your RASKAM workspace.
+                `;
+            }, 1000);
+        };
+
+        window.toggleAi = () => document.getElementById('ai-panel').classList.toggle('hidden');
+
+        window.onload = () => {
+            applyThemeStyles();
+            initCalendar();
+            initCalc();
+            renderNav();
+            renderHistory();
+            document.getElementById('scratchpad').value = state.notes || "";
+            
+            const isVividh = state.titles[state.activeIdx].toLowerCase().includes("vividh bharati");
+            if (!isVividh) {
+                setActiveSite(state.activeIdx);
+            } else {
+                setActiveSite(0);
+            }
+
+            const unitIn = document.getElementById('unit-input');
+            const unitFrom = document.getElementById('unit-from');
+            const unitRes = document.getElementById('unit-result');
+            const runConvert = () => {
+                const v = parseFloat(unitIn.value);
+                if(isNaN(v)) { unitRes.textContent = "---"; return; }
+                let m = unitFrom.value === 'ft' ? v * 0.3048 : unitFrom.value === 'in' ? v * 0.0254 : v;
+                unitRes.textContent = `${m.toFixed(2)}m | ${(m/0.3048).toFixed(1)}ft | ${(m/0.0254).toFixed(1)}in`;
+            };
+            unitIn.oninput = runConvert;
+            unitFrom.onchange = runConvert;
+
+            document.getElementById('scratchpad').oninput = (e) => {
+                state.notes = e.target.value;
+                updateState();
+            };
+        };
+    </script>
+</body>
+</html>
