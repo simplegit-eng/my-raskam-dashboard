@@ -19,7 +19,7 @@
             --accent-glow: rgba(79, 70, 229, 0.2);
         }
 
-        [data-theme="light"] {
+        body.light {
             --bg-main: #f8fafc;
             --bg-glass: rgba(0, 0, 0, 0.03);
             --border-glass: rgba(0, 0, 0, 0.1);
@@ -27,20 +27,22 @@
             --text-heading: #0f172a;
         }
 
-        [data-theme="midnight"] {
+        body.midnight {
             --bg-main: #000000;
             --bg-glass: rgba(30, 41, 59, 0.5);
             --border-glass: rgba(255, 255, 255, 0.03);
+            --text-main: #94a3b8;
+            --text-heading: #f1f5f9;
         }
 
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg-main); color: var(--text-main); transition: background-color 0.3s ease; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-main); color: var(--text-main); transition: all 0.3s ease; }
         .font-mono { font-family: 'JetBrains+Mono', monospace; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
         .glass { background: var(--bg-glass); backdrop-filter: blur(12px); border: 1px solid var(--border-glass); }
         
-        iframe { border: none; background: white; width: 100%; height: 100%; }
+        iframe { border: none; background: white; width: 100%; height: 100%; border-radius: 0 0 12px 12px; }
         
         .active-nav { background: var(--accent-glow); border-color: var(--accent-color); color: var(--text-heading); }
         .text-accent { color: var(--accent-color); }
@@ -54,11 +56,6 @@
         }
         #toast.show { transform: translateY(0); }
 
-        .color-swatch { width: 24px; height: 24px; border-radius: 6px; cursor: pointer; transition: transform 0.2s; }
-        .color-swatch:hover { transform: scale(1.1); }
-        .color-swatch.active { ring: 2px solid white; ring-offset: 2px; }
-
-        /* Custom Monogram Styles */
         .monogram-icon {
             width: 32px;
             height: 32px;
@@ -69,23 +66,155 @@
             justify-content: center;
             box-shadow: 0 4px 12px var(--accent-glow);
         }
+
+        #settings-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        #settings-modal.active { display: flex; }
+
+        .color-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s;
+        }
+        .color-dot:hover { transform: scale(1.2); }
+        .color-dot.active { border-color: white; transform: scale(1.1); }
+
+        #history-panel { display: none; }
+        .view-mode #history-panel { display: flex; }
+        .view-mode #scratchpad, .view-mode #save-btn { display: none; }
+
+        /* Analog Clock Styling */
+        .analog-clock {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1.5px solid var(--text-main);
+            position: relative;
+            background: var(--bg-glass);
+        }
+        .clock-hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom;
+            background: var(--text-heading);
+            border-radius: 4px;
+        }
+        .hour-hand { width: 2px; height: 10px; z-index: 3; }
+        .min-hand { width: 1.5px; height: 14px; z-index: 2; opacity: 0.8; }
+        .sec-hand { width: 1px; height: 16px; background: var(--accent-color); z-index: 1; }
+        .clock-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 4;
+        }
+
+        .tool-tile { display: none; }
+        .tool-tile.active { display: block; }
+
+        @keyframes pulse-alarm {
+            0% { box-shadow: 0 0 0 0px var(--accent-color); }
+            70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
+            100% { box-shadow: 0 0 0 0px rgba(79, 70, 229, 0); }
+        }
+        .alarm-ringing { animation: pulse-alarm 1s infinite; border-color: var(--accent-color) !important; background: var(--accent-glow) !important; }
     </style>
 </head>
 <body class="h-screen w-screen flex overflow-hidden">
 
+    <!-- Settings Modal -->
+    <div id="settings-modal" onclick="if(event.target === this) toggleSettings()">
+        <div class="glass w-full max-w-xl p-6 rounded-3xl border border-white/10 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto no-scrollbar">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-black uppercase tracking-widest text-heading" style="color: var(--text-heading)">Dashboard Settings</h2>
+                <button onclick="toggleSettings()" class="p-2 hover:bg-white/10 rounded-full"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="space-y-6">
+                <!-- Theme/Accent -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-500 mb-2 block tracking-widest">Theme Mode</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="setTheme('dark')" class="p-2 rounded-lg border border-white/5 bg-white/5 text-[9px] font-bold hover:bg-white/10">DARK</button>
+                            <button onclick="setTheme('light')" class="p-2 rounded-lg border border-white/5 bg-white/5 text-[9px] font-bold hover:bg-white/10">LIGHT</button>
+                            <button onclick="setTheme('midnight')" class="p-2 rounded-lg border border-white/5 bg-white/5 text-[9px] font-bold hover:bg-white/10">MID</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-slate-500 mb-2 block tracking-widest">Accent Color</label>
+                        <div class="flex flex-wrap gap-2 items-center bg-black/20 p-2 rounded-xl border border-white/5">
+                            <div class="color-dot" style="background: #4f46e5;" onclick="setAccent('#4f46e5')"></div>
+                            <div class="color-dot" style="background: #e11d48;" onclick="setAccent('#e11d48')"></div>
+                            <div class="color-dot" style="background: #10b981;" onclick="setAccent('#10b981')"></div>
+                            <div class="color-dot" style="background: #f59e0b;" onclick="setAccent('#f59e0b')"></div>
+                            <div class="color-dot" style="background: #0ea5e9;" onclick="setAccent('#0ea5e9')"></div>
+                            <div class="w-px h-4 bg-white/10 mx-1"></div>
+                            <input type="color" id="accent-picker" oninput="setAccent(this.value)" class="w-6 h-6 rounded-full cursor-pointer bg-transparent border-none p-0 overflow-hidden">
+                            <span id="accent-hex" class="font-mono text-[10px] uppercase opacity-60 ml-1">#4f46e5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Management -->
+                <div>
+                    <label class="text-[10px] font-black uppercase text-slate-500 mb-3 block tracking-widest">Edit Navigation Slots</label>
+                    <div id="edit-slots-container" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-white/5 flex justify-end">
+                <button onclick="toggleSettings()" class="px-6 py-2 bg-accent rounded-xl text-white font-bold text-xs uppercase tracking-widest shadow-lg">Save & Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar Left: Tools -->
     <aside class="w-64 border-r border-white/5 flex flex-col p-4 space-y-4 glass z-20">
-        <div class="flex items-center gap-3 px-2 mb-2">
-            <div class="monogram-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 20V4H12C15.3137 4 18 6.68629 18 10C18 12.8358 16.0339 15.212 13.3503 15.8231L18 20H14.5L10.5 16H8V20H4ZM8 12H12C13.1046 12 14 11.1046 14 10C14 8.89543 13.1046 8 12 8H8V12Z" fill="white"/>
-                </svg>
+        <div class="flex flex-col gap-3 px-2 mb-2">
+            <div class="flex items-center gap-3">
+                <div class="monogram-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 20V4H12C15.3137 4 18 6.68629 18 10C18 12.8358 16.0339 15.212 13.3503 15.8231L18 20H14.5L10.5 16H8V20H4ZM8 12H12C13.1046 12 14 11.1046 14 10C14 8.89543 13.1046 8 12 8H8V12Z" fill="white"/>
+                    </svg>
+                </div>
+                <h1 class="text-sm font-black tracking-widest text-heading uppercase" style="color: var(--text-heading)">RASKAM</h1>
             </div>
-            <h1 class="text-sm font-black tracking-widest text-heading uppercase" style="color: var(--text-heading)">RASKAM</h1>
+            
+            <!-- Quick Tools Selector -->
+            <div class="relative group mt-1">
+                <select id="tool-selector" onchange="switchTool(this.value)" class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 appearance-none cursor-pointer hover:bg-white/10 transition-all outline-none">
+                    <option value="world-time">World Time</option>
+                    <option value="calculator">Calculator</option>
+                    <option value="measure">Measure</option>
+                    <option value="currency">Currency</option>
+                    <option value="health">Health Timer</option>
+                </select>
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-500">
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            </div>
         </div>
 
         <div class="flex-1 space-y-4 overflow-y-auto no-scrollbar pr-1">
-            <!-- Calendar Widget -->
+            <!-- Calendar Widget (Always visible) -->
             <div class="bg-white/5 rounded-2xl p-3 border border-white/5 shadow-sm">
                 <div id="calendar-header" class="text-[10px] font-bold text-accent uppercase tracking-wider mb-2 flex justify-between">
                     <span id="cal-month-year"></span>
@@ -93,8 +222,17 @@
                 <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-center"></div>
             </div>
 
-            <!-- Calculator Widget -->
-            <div class="bg-white/5 rounded-2xl p-3 border border-white/5 shadow-sm">
+            <!-- World Clock Tile -->
+            <div id="tile-world-time" class="tool-tile active bg-white/5 rounded-2xl p-3 border border-white/5 shadow-sm">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-clock text-[12px] text-accent"></i>
+                    <span class="text-[9px] font-black uppercase text-slate-500 tracking-widest">World Time</span>
+                </div>
+                <div id="world-clocks" class="space-y-3"></div>
+            </div>
+
+            <!-- Calculator Tile -->
+            <div id="tile-calculator" class="tool-tile bg-white/5 rounded-2xl p-3 border border-white/5 shadow-sm">
                 <div class="text-right mb-2 pr-1">
                     <div id="calc-eq" class="text-[9px] text-slate-500 font-mono truncate h-3">0</div>
                     <div id="calc-display" class="text-lg font-bold text-heading truncate" style="color: var(--text-heading)">0</div>
@@ -102,13 +240,13 @@
                 <div class="grid grid-cols-4 gap-1" id="calc-btns"></div>
             </div>
 
-            <!-- Unit Converter -->
-            <div class="bg-white/5 rounded-2xl p-3 border border-white/5 shadow-sm">
+            <!-- Unit Converter Tile -->
+            <div id="tile-measure" class="tool-tile bg-white/5 rounded-2xl p-3 border border-white/5 shadow-sm">
                 <div class="flex items-center gap-2 mb-2">
                     <i class="fas fa-ruler-combined text-[12px] text-accent"></i>
                     <span class="text-[9px] font-black uppercase text-slate-500 tracking-widest">Measure</span>
                 </div>
-                <div class="flex gap-1 mb-1">
+                <div class="flex gap-1 mb-2">
                     <input type="number" id="unit-input" placeholder="Val" class="w-full bg-black/20 border border-white/5 rounded-lg px-2 py-1 text-[10px] font-bold text-heading outline-none" style="color: var(--text-heading)">
                     <select id="unit-from" class="bg-black/20 border border-white/5 rounded-lg text-[9px] font-bold text-slate-400 outline-none p-1">
                         <option value="ft">FT</option>
@@ -116,7 +254,64 @@
                         <option value="m">M</option>
                     </select>
                 </div>
-                <div id="unit-result" class="text-[9px] font-mono text-accent bg-white/5 rounded-lg py-1 px-2 truncate">Result</div>
+                <div id="unit-result" class="text-[9px] font-mono text-accent bg-white/5 rounded-lg py-1.5 px-2 flex justify-between gap-1 overflow-hidden">
+                    <span>-</span><span>-</span><span>-</span>
+                </div>
+            </div>
+
+            <!-- Currency Exchange Tile -->
+            <div id="tile-currency" class="tool-tile bg-white/5 rounded-2xl p-3 border border-white/5 shadow-sm">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-coins text-[12px] text-accent"></i>
+                    <span class="text-[9px] font-black uppercase text-slate-500 tracking-widest">Currency</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex gap-1">
+                        <input type="number" id="curr-input" value="1" class="w-full bg-black/20 border border-white/5 rounded-lg px-2 py-1 text-[10px] font-bold text-heading outline-none" style="color: var(--text-heading)">
+                        <select id="curr-from" class="bg-black/20 border border-white/5 rounded-lg text-[9px] font-bold text-slate-400 outline-none p-1">
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                            <option value="INR">INR</option>
+                            <option value="JPY">JPY</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-1 gap-1" id="curr-results">
+                        <!-- Results injected via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Health Timer Tile -->
+            <div id="tile-health" class="tool-tile bg-white/5 rounded-2xl p-3 border border-white/5 shadow-sm">
+                <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-heartbeat text-[12px] text-accent"></i>
+                    <span class="text-[9px] font-black uppercase text-slate-500 tracking-widest">Health Timer</span>
+                </div>
+                <div id="health-timer-container" class="space-y-2 transition-all">
+                    <!-- Manual Select Input -->
+                    <div class="flex gap-1">
+                        <div class="relative flex-1">
+                            <input type="number" id="health-custom-mins" placeholder="Mins" min="1" max="999" class="w-full bg-black/20 border border-white/5 rounded-lg px-2 py-1.5 text-[10px] font-bold text-heading outline-none focus:border-accent/50 transition-all" style="color: var(--text-heading)">
+                            <span class="absolute right-2 top-1/2 -translate-y-1/2 text-[8px] text-slate-500 font-bold pointer-events-none">MIN</span>
+                        </div>
+                        <button onclick="applyHealthCustom()" class="px-2 bg-accent/20 text-accent border border-accent/30 rounded-lg hover:bg-accent/30 transition-all">
+                            <i class="fas fa-check text-[10px]"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex justify-between items-center bg-black/20 rounded-xl p-2 border border-white/5">
+                        <span id="health-display" class="text-xl font-mono font-bold text-heading" style="color: var(--text-heading)">20:00</span>
+                        <div class="flex gap-1">
+                            <button id="health-toggle" onclick="toggleHealthTimer()" class="w-8 h-8 flex items-center justify-center bg-accent/20 border border-accent/30 rounded-lg text-accent hover:bg-accent/30"><i class="fas fa-play text-[10px]"></i></button>
+                            <button onclick="resetHealthTimer()" class="w-8 h-8 flex items-center justify-center bg-white/5 border border-white/10 rounded-lg text-slate-400 hover:bg-white/10"><i class="fas fa-redo text-[10px]"></i></button>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="setHealthPreset(20)" class="flex-1 py-1 bg-white/5 rounded-lg text-[8px] font-bold uppercase tracking-tighter hover:bg-accent/10 transition-colors">20m (Eye)</button>
+                        <button onclick="setHealthPreset(60)" class="flex-1 py-1 bg-white/5 rounded-lg text-[8px] font-bold uppercase tracking-tighter hover:bg-accent/10 transition-colors">1h (Water)</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -146,22 +341,11 @@
         </header>
         <div class="flex-1 relative bg-slate-950/20">
             <iframe id="main-frame" src="about:blank"></iframe>
-            
-            <div id="ai-panel" class="hidden absolute top-4 right-4 w-80 bg-slate-900/95 backdrop-blur-2xl border border-accent/30 rounded-2xl p-4 shadow-2xl z-50">
-                <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-2 text-accent">
-                        <i class="fas fa-brain"></i>
-                        <span class="text-[10px] font-black uppercase">Gemini Analysis</span>
-                    </div>
-                    <button onclick="toggleAi()" class="text-slate-500 hover:text-white"><i class="fas fa-times text-xs"></i></button>
-                </div>
-                <div id="ai-content" class="text-[11px] leading-relaxed text-slate-300 max-h-64 overflow-y-auto no-scrollbar">Researching...</div>
-            </div>
         </div>
     </main>
 
     <!-- Sidebar Right -->
-    <aside class="w-80 border-l border-white/5 flex flex-col glass z-20">
+    <aside id="right-sidebar" class="w-80 border-l border-white/5 flex flex-col glass z-20">
         <div class="p-4 border-b border-white/5">
             <h3 class="text-[10px] font-black uppercase text-slate-500 mb-3 tracking-widest">Navigation Slots</h3>
             <div class="space-y-2" id="nav-slots"></div>
@@ -173,156 +357,61 @@
                     <i class="fas fa-file-alt text-accent"></i>
                     <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Scratchpad</span>
                 </div>
-                <div class="flex gap-1">
-                    <button onclick="toggleHistory()" class="p-1.5 rounded-lg text-slate-500 hover:bg-white/5" title="History"><i class="fas fa-history"></i></button>
-                    <button id="save-note-btn" onclick="saveNotes()" class="p-1.5 rounded-lg text-slate-500 hover:text-accent" title="Save Now"><i class="fas fa-save"></i></button>
+                <div class="flex gap-3">
+                    <button onclick="toggleScratchpadMode()" id="scratchpad-mode-btn" class="text-[10px] font-black uppercase text-slate-500 hover:text-accent transition-colors">
+                        <i class="fas fa-eye mr-1"></i>View
+                    </button>
+                    <button id="save-btn" onclick="saveNote()" class="text-[10px] font-black uppercase text-accent hover:opacity-70">
+                        <i class="fas fa-save mr-1"></i>Save
+                    </button>
                 </div>
             </div>
             
-            <div class="flex-1 relative overflow-hidden flex flex-col">
-                <textarea id="scratchpad" class="flex-1 bg-white/5 rounded-2xl p-4 text-[11px] font-mono resize-none focus:outline-none border border-white/5 text-slate-300 focus:border-accent/30 transition-all" placeholder="Capture thoughts..."></textarea>
-                
-                <div id="history-panel" class="hidden absolute inset-0 bg-[#0f172a] rounded-2xl border border-white/5 overflow-y-auto no-scrollbar p-3 space-y-2">
-                    <div class="flex justify-between items-center mb-2 px-1">
-                        <span class="text-[10px] font-bold text-slate-500">RECENT SAVES</span>
-                        <button onclick="toggleHistory()" class="text-slate-500 hover:text-white"><i class="fas fa-times text-xs"></i></button>
-                    </div>
-                    <div id="history-list" class="space-y-2"></div>
+            <textarea id="scratchpad" class="flex-1 bg-white/5 rounded-2xl p-4 text-[11px] font-mono resize-none focus:outline-none border border-white/5 text-slate-300 focus:border-accent/30 transition-all mb-4" placeholder="Capture thoughts..."></textarea>
+            
+            <div id="history-panel" class="flex-1 flex flex-col overflow-hidden">
+                <div class="flex items-center justify-between px-1 mb-2">
+                    <span class="text-[9px] font-black uppercase tracking-widest text-slate-500">History Log</span>
                 </div>
+                <div id="note-history" class="flex-1 overflow-y-auto no-scrollbar space-y-2 pr-1"></div>
             </div>
         </div>
     </aside>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-sm">
-        <div class="w-full max-w-xl bg-slate-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
-            <h3 class="text-xl font-bold mb-6 text-white flex items-center gap-2"><i class="fas fa-cog text-accent"></i> Dashboard Settings</h3>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Portal Setup -->
-                <div class="space-y-4">
-                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5 pb-2">Portals</h4>
-                    <div class="space-y-4" id="settings-inputs"></div>
-                </div>
-
-                <!-- Appearance Setup -->
-                <div class="space-y-6">
-                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest border-b border-white/5 pb-2">Appearance</h4>
-                    
-                    <div class="space-y-3">
-                        <label class="text-[10px] font-bold text-slate-400">THEME</label>
-                        <div class="flex gap-2 p-1 bg-black/20 rounded-xl">
-                            <button onclick="setTheme('dark')" id="theme-dark" class="flex-1 py-2 text-[10px] font-bold rounded-lg transition-all">DARK</button>
-                            <button onclick="setTheme('light')" id="theme-light" class="flex-1 py-2 text-[10px] font-bold rounded-lg transition-all">LIGHT</button>
-                            <button onclick="setTheme('midnight')" id="theme-midnight" class="flex-1 py-2 text-[10px] font-bold rounded-lg transition-all">MIDNIGHT</button>
-                        </div>
-                    </div>
-
-                    <div class="space-y-3">
-                        <label class="text-[10px] font-bold text-slate-400">ACCENT COLOR</label>
-                        <div class="flex flex-wrap gap-3" id="accent-picker">
-                            <div onclick="setAccent('#4f46e5')" class="color-swatch bg-[#4f46e5]" title="Indigo"></div>
-                            <div onclick="setAccent('#0ea5e9')" class="color-swatch bg-[#0ea5e9]" title="Sky"></div>
-                            <div onclick="setAccent('#10b981')" class="color-swatch bg-[#10b981]" title="Emerald"></div>
-                            <div onclick="setAccent('#f59e0b')" class="color-swatch bg-[#f59e0b]" title="Amber"></div>
-                            <div onclick="setAccent('#ef4444')" class="color-swatch bg-[#ef4444]" title="Rose"></div>
-                            <div onclick="setAccent('#a855f7')" class="color-swatch bg-[#a855f7]" title="Purple"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="pt-8 flex gap-3">
-                <button onclick="toggleSettings()" class="flex-1 py-3 text-xs font-bold text-slate-500 hover:text-white transition-colors">Cancel</button>
-                <button onclick="applySettings()" class="flex-[2] py-3 bg-accent text-white font-bold rounded-2xl text-xs shadow-lg hover:brightness-110 transition-all">Save Changes</button>
-            </div>
-        </div>
-    </div>
-
     <div id="toast">Changes saved.</div>
 
     <script>
-        // Mapping of common domains to icons and descriptive titles
-        const DOMAIN_MAP = {
-            'wikipedia.org': { title: 'Wikipedia', icon: 'fa-globe' },
-            'tamildailycalendar.com': { title: 'Tamil Calendar', icon: 'fa-calendar-alt' },
-            'deccanherald.com': { title: 'Deccan Herald', icon: 'fa-newspaper' },
-            'akashvani.gov.in': { title: 'Vividh Bharati', icon: 'fa-radio' },
-            'youtube.com': { title: 'YouTube', icon: 'fa-play-circle' },
-            'github.com': { title: 'GitHub', icon: 'fa-code-branch' },
-            'google.com': { title: 'Google', icon: 'fa-search' },
-            'reddit.com': { title: 'Reddit', icon: 'fa-comments' },
-            'twitter.com': { title: 'Twitter', icon: 'fa-hashtag' },
-            'x.com': { title: 'Twitter', icon: 'fa-hashtag' }
-        };
-
         const DEFAULT_STATE = {
             sites: [
-                "https://www.tamildailycalendar.com/tamil_daily_calendar.php",
-                "https://en.wikipedia.org/wiki/Main_Page",
-                "https://www.deccanherald.com/top-karnataka-news",
+                "https://www.tamildailycalendar.com/tamil_daily_calendar.php", 
+                "https://en.wikipedia.org/wiki/Main_Page", 
+                "https://www.deccanherald.com/top-karnataka-news", 
                 "https://akashvani.gov.in/radio/live.php"
             ],
             titles: ["Tamil Calendar", "Wikipedia", "Deccan Herald", "Vividh Bharati"],
-            icons: ["fa-calendar-alt", "fa-globe", "fa-newspaper", "fa-radio"],
             activeIdx: 0,
-            notes: "",
-            history: [],
+            activeTool: 'world-time',
             theme: 'dark',
-            accent: '#4f46e5'
+            accent: '#4f46e5',
+            notes: "",
+            history: []
         };
 
         let state = JSON.parse(localStorage.getItem('omni_dashboard_state')) || DEFAULT_STATE;
 
-        // Backward compatibility for existing localstorage
-        if (!state.icons) {
-            state.icons = ["fa-calendar-alt", "fa-globe", "fa-newspaper", "fa-radio"];
+        function updateState() { 
+            localStorage.setItem('omni_dashboard_state', JSON.stringify(state)); 
+            renderNav();
+            renderHistory();
         }
 
-        function updateState() {
-            localStorage.setItem('omni_dashboard_state', JSON.stringify(state));
+        function switchTool(toolId) {
+            state.activeTool = toolId;
+            document.querySelectorAll('.tool-tile').forEach(tile => tile.classList.remove('active'));
+            const target = document.getElementById(`tile-${toolId}`);
+            if (target) target.classList.add('active');
+            updateState();
         }
-
-        function getInfoFromUrl(url) {
-            try {
-                const domain = new URL(url).hostname.replace('www.', '');
-                if (DOMAIN_MAP[domain]) return DOMAIN_MAP[domain];
-                
-                // Generic fallback
-                const name = domain.split('.')[0];
-                return { 
-                    title: name.charAt(0).toUpperCase() + name.slice(1), 
-                    icon: 'fa-link' 
-                };
-            } catch {
-                return { title: 'Custom Portal', icon: 'fa-globe' };
-            }
-        }
-
-        function applyThemeStyles() {
-            document.body.setAttribute('data-theme', state.theme);
-            document.documentElement.style.setProperty('--accent-color', state.accent);
-            document.documentElement.style.setProperty('--accent-glow', `${state.accent}33`);
-            
-            ['dark', 'light', 'midnight'].forEach(t => {
-                const btn = document.getElementById(`theme-${t}`);
-                if(btn) {
-                    btn.className = state.theme === t 
-                        ? "flex-1 py-2 text-[10px] font-bold rounded-lg bg-accent text-white" 
-                        : "flex-1 py-2 text-[10px] font-bold rounded-lg text-slate-500 hover:text-white";
-                }
-            });
-        }
-
-        window.setTheme = (t) => {
-            state.theme = t;
-            applyThemeStyles();
-        };
-
-        window.setAccent = (hex) => {
-            state.accent = hex;
-            applyThemeStyles();
-        };
 
         function showToast(msg) {
             const t = document.getElementById('toast');
@@ -331,55 +420,64 @@
             setTimeout(() => t.classList.remove('show'), 2000);
         }
 
-        window.setActiveSite = (idx) => {
-            const isVividh = state.titles[idx].toLowerCase().includes("vividh bharati");
-            if (isVividh) {
-                window.open(state.sites[idx], '_blank');
-                return;
-            }
-
-            state.activeIdx = idx;
-            const frame = document.getElementById('main-frame');
-            frame.src = state.sites[idx];
-            document.getElementById('current-url-display').textContent = state.sites[idx];
-            
-            document.getElementById('current-icon').className = `fas ${state.icons[idx] || 'fa-globe'} text-accent`;
-            
+        function setTheme(theme) {
+            state.theme = theme;
+            document.body.className = `h-screen w-screen flex overflow-hidden ${theme}`;
             updateState();
-            renderNav();
+        }
+
+        function setAccent(color) {
+            state.accent = color;
+            document.documentElement.style.setProperty('--accent-color', color);
+            document.documentElement.style.setProperty('--accent-glow', color + '33');
+            const hexText = document.getElementById('accent-hex');
+            if (hexText) hexText.textContent = color;
+            const picker = document.getElementById('accent-picker');
+            if (picker) picker.value = color;
+            
+            document.querySelectorAll('.color-dot').forEach(dot => {
+                const bg = dot.style.background;
+                if (bg.includes(color) || dot.getAttribute('style').includes(color)) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+            updateState();
+        }
+
+        function updateSlot(idx, field, value) {
+            if (field === 'title') state.titles[idx] = value;
+            if (field === 'site') state.sites[idx] = value;
+            updateState();
+        }
+
+        window.toggleSettings = () => {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.toggle('active');
+            if (modal.classList.contains('active')) {
+                renderEditSlots();
+                setAccent(state.accent);
+            }
         };
 
-        window.refreshFrame = () => {
-            const frame = document.getElementById('main-frame');
-            frame.src = frame.src;
-        };
-
-        window.openExternal = () => {
-            window.open(state.sites[state.activeIdx], '_blank');
-        };
-
-        function renderNav() {
-            const container = document.getElementById('nav-slots');
+        function renderEditSlots() {
+            const container = document.getElementById('edit-slots-container');
             container.innerHTML = '';
-
-            state.sites.forEach((site, i) => {
-                const isVividh = state.titles[i].toLowerCase().includes("vividh bharati");
-                const isActive = !isVividh && state.activeIdx === i;
-                
-                const btn = document.createElement('button');
-                btn.className = `w-full flex items-center justify-between p-3 rounded-xl border transition-all ${isActive ? 'active-nav' : 'bg-white/5 border-transparent text-slate-400 hover:bg-white/10'}`;
-                btn.onclick = () => setActiveSite(i);
-                
-                btn.innerHTML = `
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <div class="p-1.5 rounded-lg flex-shrink-0 ${isActive ? 'bg-accent text-white' : 'bg-slate-700 text-slate-300'}">
-                            <i class="fas ${state.icons[i] || 'fa-globe'} text-[10px]"></i>
-                        </div>
-                        <span class="text-[11px] font-bold truncate">${state.titles[i] || 'Portal'}</span>
+            state.sites.forEach((s, i) => {
+                const row = document.createElement('div');
+                row.className = 'bg-black/20 p-3 rounded-xl border border-white/5 space-y-2';
+                row.innerHTML = `
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-[9px] font-black text-accent uppercase">Slot ${i+1}</span>
+                        <input type="text" value="${state.titles[i]}" oninput="updateSlot(${i}, 'title', this.value)" 
+                               class="bg-transparent border-b border-white/10 text-[10px] font-bold outline-none text-heading w-full text-right" 
+                               style="color: var(--text-heading)">
                     </div>
-                    <i class="fas ${isVividh ? 'fa-external-link-alt' : 'fa-chevron-right'} text-[10px] ${isActive || isVividh ? 'opacity-100' : 'opacity-0'}"></i>
+                    <input type="text" value="${state.sites[i]}" oninput="updateSlot(${i}, 'site', this.value)" 
+                           class="w-full bg-black/40 border border-white/5 rounded-lg px-2 py-1 text-[9px] font-mono text-slate-400 outline-none">
                 `;
-                container.appendChild(btn);
+                container.appendChild(row);
             });
         }
 
@@ -400,8 +498,7 @@
             for(let i=0; i<firstDay; i++) grid.appendChild(document.createElement('div'));
             for(let i=1; i<=daysInMonth; i++) {
                 const day = document.createElement('div');
-                const isToday = i === now.getDate();
-                day.className = `text-[9px] p-0.5 rounded-md cursor-default ${isToday ? 'bg-accent text-white font-bold' : 'text-slate-400 hover:text-white'}`;
+                day.className = `text-[9px] p-0.5 rounded-md ${i === now.getDate() ? 'bg-accent text-white font-bold' : 'text-slate-400'}`;
                 day.textContent = i;
                 grid.appendChild(day);
             }
@@ -409,172 +506,331 @@
 
         function initCalc() {
             const display = document.getElementById('calc-display');
-            const eq = document.getElementById('calc-eq');
             const btns = ['7','8','9','/','4','5','6','*','1','2','3','-','0','.','=','C'];
             const container = document.getElementById('calc-btns');
             let currentEq = "";
             btns.forEach(b => {
                 const btn = document.createElement('button');
-                btn.className = 'h-7 rounded-lg text-[10px] font-bold bg-white/5 hover:bg-accent text-slate-300 hover:text-white transition-all';
+                btn.className = 'h-7 rounded-lg text-[10px] font-bold bg-white/5 hover:bg-accent transition-all';
                 btn.textContent = b;
                 btn.onclick = () => {
-                    if (b === 'C') { currentEq = ""; display.textContent = "0"; eq.textContent = "0"; }
-                    else if (b === '=') {
-                        try { 
-                            const res = eval(currentEq.replace(/[^-+*/.0-9]/g, ''));
-                            display.textContent = res;
-                            currentEq = res.toString();
-                        } catch { display.textContent = "Err"; }
-                    } else {
-                        currentEq += b;
-                        display.textContent = currentEq;
-                        eq.textContent = currentEq;
-                    }
+                    if (b === 'C') { currentEq = ""; display.textContent = "0"; }
+                    else if (b === '=') { try { display.textContent = eval(currentEq); currentEq = display.textContent; } catch { display.textContent = "Err"; } }
+                    else { currentEq += b; display.textContent = currentEq; }
                 };
                 container.appendChild(btn);
             });
         }
 
-        window.saveNotes = () => {
-            const content = document.getElementById('scratchpad').value;
-            if (!content.trim()) return;
-            state.notes = content;
-            state.history.unshift({ id: Date.now(), content, timestamp: Date.now() });
-            state.history = state.history.slice(0, 20);
+        function initCurrency() {
+            const rates = { USD: 1, EUR: 0.92, GBP: 0.79, INR: 83.3, JPY: 151.6 };
+            const container = document.getElementById('curr-results');
+            const input = document.getElementById('curr-input');
+            const fromSelect = document.getElementById('curr-from');
+
+            const updateCurrency = () => {
+                const val = parseFloat(input.value) || 0;
+                const from = fromSelect.value;
+                const baseVal = val / rates[from];
+                
+                container.innerHTML = '';
+                Object.keys(rates).forEach(sym => {
+                    if (sym === from) return;
+                    const converted = (baseVal * rates[sym]).toLocaleString(undefined, { maximumFractionDigits: 2 });
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center bg-black/10 rounded-lg px-2 py-1 border border-white/5';
+                    div.innerHTML = `
+                        <span class="text-[8px] font-black text-slate-500">${sym}</span>
+                        <span class="text-[10px] font-mono text-accent font-bold">${converted}</span>
+                    `;
+                    container.appendChild(div);
+                });
+            };
+
+            input.oninput = updateCurrency;
+            fromSelect.onchange = updateCurrency;
+            updateCurrency();
+        }
+
+        // Health Timer Logic
+        let healthTimer = null;
+        let healthSeconds = 20 * 60;
+        let healthRunning = false;
+
+        function updateHealthDisplay() {
+            const m = Math.floor(healthSeconds / 60);
+            const s = healthSeconds % 60;
+            document.getElementById('health-display').textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function applyHealthCustom() {
+            const input = document.getElementById('health-custom-mins');
+            const mins = parseInt(input.value);
+            if (!isNaN(mins) && mins > 0) {
+                setHealthPreset(mins);
+                showToast(`Timer set to ${mins}m`);
+                input.value = "";
+            }
+        }
+
+        function toggleHealthTimer() {
+            const btn = document.getElementById('health-toggle');
+            const container = document.getElementById('health-timer-container');
+            if (healthRunning) {
+                clearInterval(healthTimer);
+                btn.innerHTML = '<i class="fas fa-play text-[10px]"></i>';
+                healthRunning = false;
+            } else {
+                if (healthSeconds <= 0) { resetHealthTimer(); }
+                container.classList.remove('alarm-ringing');
+                healthRunning = true;
+                btn.innerHTML = '<i class="fas fa-pause text-[10px]"></i>';
+                healthTimer = setInterval(() => {
+                    healthSeconds--;
+                    if (healthSeconds <= 0) {
+                        clearInterval(healthTimer);
+                        healthRunning = false;
+                        healthSeconds = 0;
+                        btn.innerHTML = '<i class="fas fa-play text-[10px]"></i>';
+                        triggerHealthAlarm();
+                    }
+                    updateHealthDisplay();
+                }, 1000);
+            }
+        }
+
+        function resetHealthTimer() {
+            clearInterval(healthTimer);
+            healthRunning = false;
+            healthSeconds = 20 * 60;
+            document.getElementById('health-toggle').innerHTML = '<i class="fas fa-play text-[10px]"></i>';
+            document.getElementById('health-timer-container').classList.remove('alarm-ringing');
+            updateHealthDisplay();
+        }
+
+        function setHealthPreset(mins) {
+            clearInterval(healthTimer);
+            healthRunning = false;
+            healthSeconds = mins * 60;
+            document.getElementById('health-toggle').innerHTML = '<i class="fas fa-play text-[10px]"></i>';
+            document.getElementById('health-timer-container').classList.remove('alarm-ringing');
+            updateHealthDisplay();
+        }
+
+        function triggerHealthAlarm() {
+            document.getElementById('health-timer-container').classList.add('alarm-ringing');
+            showToast("Health Alert: Time for a break!");
+            
+            // Audible Tone using Web Audio API
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                const playTone = (freq, start, duration) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+                    
+                    gain.gain.setValueAtTime(0, ctx.currentTime + start);
+                    gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + start + 0.05);
+                    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + duration);
+                    
+                    osc.start(ctx.currentTime + start);
+                    osc.stop(ctx.currentTime + start + duration);
+                };
+
+                // Play a "Beep-Boop" sequence
+                playTone(880, 0, 0.4);   // A5
+                playTone(1108.73, 0.4, 0.6); // C#6
+            } catch (e) {
+                console.error("Audio playback failed", e);
+            }
+        }
+
+        function initWorldClock() {
+            const cities = [
+                { name: 'London', zone: 'Europe/London' },
+                { name: 'New York', zone: 'America/New_York' },
+                { name: 'Tokyo', zone: 'Asia/Tokyo' },
+                { name: 'Dubai', zone: 'Asia/Dubai' }
+            ];
+            const container = document.getElementById('world-clocks');
+            const updateClocks = () => {
+                const now = new Date();
+                container.innerHTML = '';
+                cities.forEach(city => {
+                    const cityDate = new Date(now.toLocaleString('en-US', { timeZone: city.zone }));
+                    const localDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+                    const diffMs = cityDate - localDate;
+                    const diffHrs = Math.round(diffMs / (1000 * 60 * 60) * 10) / 10;
+                    const diffStr = diffHrs === 0 ? 'Same' : (diffHrs > 0 ? `+${diffHrs}` : `${diffHrs}`) + 'h';
+                    const hDeg = (cityDate.getHours() % 12) * 30 + cityDate.getMinutes() * 0.5;
+                    const mDeg = cityDate.getMinutes() * 6;
+                    const sDeg = cityDate.getSeconds() * 6;
+
+                    const div = document.createElement('div');
+                    div.className = 'bg-black/20 rounded-xl p-2.5 border border-white/5 flex items-center gap-3';
+                    div.innerHTML = `
+                        <div class="analog-clock flex-shrink-0">
+                            <div class="clock-hand hour-hand" style="transform: translateX(-50%) rotate(${hDeg}deg)"></div>
+                            <div class="clock-hand min-hand" style="transform: translateX(-50%) rotate(${mDeg}deg)"></div>
+                            <div class="clock-hand sec-hand" style="transform: translateX(-50%) rotate(${sDeg}deg)"></div>
+                            <div class="clock-center"></div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between mb-0.5">
+                                <span class="text-[10px] font-black text-white uppercase tracking-tight truncate">${city.name}</span>
+                                <span class="text-[8px] font-bold text-accent px-1.5 py-0.5 bg-accent/10 rounded-md border border-accent/20">${diffStr}</span>
+                            </div>
+                            <div class="text-[9px] font-mono text-slate-500">${cityDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</div>
+                        </div>`;
+                    container.appendChild(div);
+                });
+            };
+            updateClocks();
+            setInterval(updateClocks, 1000);
+        }
+
+        window.setActiveSite = (idx) => {
+            state.activeIdx = idx;
+            const targetUrl = state.sites[idx];
+            const targetTitle = state.titles[idx];
+            
+            // Display URL update
+            document.getElementById('current-url-display').textContent = targetUrl;
+
+            // Logic: exception for Vividh Bharati (typically slot 4 or based on title)
+            if (targetTitle.toLowerCase().includes('vividh') || targetUrl.includes('akashvani')) {
+                // Open in NEW TAB for radio to keep playing even if dashboard is used for other things
+                window.open(targetUrl, '_blank');
+                showToast("Opening radio in new tab for playback...");
+            } else {
+                // Load in CENTRAL TILE
+                document.getElementById('main-frame').src = targetUrl;
+            }
+            
             updateState();
-            renderHistory();
-            showToast("Note captured.");
         };
 
-        window.deleteNote = (e, id) => {
-            e.stopPropagation();
-            state.history = state.history.filter(item => item.id !== id);
+        window.saveNote = () => {
+            const txt = document.getElementById('scratchpad').value.trim();
+            if(!txt) return;
+            state.history.unshift({ id: Date.now(), content: txt, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+            document.getElementById('scratchpad').value = "";
+            state.notes = "";
+            showToast("Note saved");
             updateState();
-            renderHistory();
-            showToast("Note deleted.");
         };
 
-        window.toggleHistory = () => document.getElementById('history-panel').classList.toggle('hidden');
+        window.deleteNote = (id) => { state.history = state.history.filter(n => n.id !== id); updateState(); };
+
+        window.toggleScratchpadMode = () => {
+            const isView = document.getElementById('right-sidebar').classList.toggle('view-mode');
+            const btn = document.getElementById('scratchpad-mode-btn');
+            btn.innerHTML = isView ? '<i class="fas fa-edit mr-1"></i>Edit' : '<i class="fas fa-eye mr-1"></i>View';
+            if (isView) btn.classList.add('text-accent'); else btn.classList.remove('text-accent');
+        };
 
         function renderHistory() {
-            const list = document.getElementById('history-list');
-            list.innerHTML = '';
-            if (state.history.length === 0) {
-                list.innerHTML = '<div class="text-[10px] text-slate-600 text-center py-8 italic">No saved notes</div>';
-                return;
-            }
-            state.history.forEach(item => {
+            const container = document.getElementById('note-history');
+            container.innerHTML = state.history.length === 0 ? '<div class="text-[10px] text-slate-600 italic p-4 text-center">No saved notes</div>' : '';
+            state.history.forEach(note => {
                 const div = document.createElement('div');
-                div.className = 'group p-3 bg-white/5 rounded-xl hover:bg-white/10 border border-white/5 transition-all cursor-pointer relative';
-                div.onclick = () => {
-                    document.getElementById('scratchpad').value = item.content;
-                    state.notes = item.content;
-                    toggleHistory();
-                };
+                div.className = 'bg-white/5 border border-white/5 rounded-xl p-3 relative group hover:border-accent/30 transition-all';
                 div.innerHTML = `
-                    <div class="flex justify-between mb-1 items-start">
-                        <span class="text-[8px] text-slate-500">${new Date(item.timestamp).toLocaleString()}</span>
-                        <div class="flex gap-2">
-                            <i class="fas fa-undo text-[10px] text-accent opacity-0 group-hover:opacity-100 transition-opacity"></i>
-                            <button onclick="deleteNote(event, ${item.id})" class="text-slate-500 hover:text-red-400 transition-colors">
-                                <i class="fas fa-trash-alt text-[10px]"></i>
-                            </button>
-                        </div>
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-[8px] font-black text-slate-500 uppercase">${note.timestamp}</span>
+                        <button onclick="deleteNote(${note.id})" class="opacity-0 group-hover:opacity-100 text-[10px] text-rose-500 hover:text-rose-400 transition-all"><i class="fas fa-trash-alt"></i></button>
                     </div>
-                    <p class="text-[10px] text-slate-400 line-clamp-2 pr-4">${item.content}</p>
-                `;
-                list.appendChild(div);
+                    <div class="text-[10px] text-slate-300 font-mono whitespace-pre-wrap break-words">${note.content}</div>`;
+                container.appendChild(div);
             });
         }
 
-        window.toggleSettings = () => {
-            const modal = document.getElementById('settings-modal');
-            const inputs = document.getElementById('settings-inputs');
-            modal.classList.toggle('hidden');
-            if(!modal.classList.contains('hidden')) {
-                inputs.innerHTML = '';
-                state.sites.forEach((s, i) => {
-                    inputs.innerHTML += `
-                        <div class="flex flex-col gap-1">
-                            <div class="flex items-center gap-2 pl-1 mb-1">
-                                <i class="fas ${state.icons[i]} text-[9px] text-accent"></i>
-                                <label class="text-[9px] font-black uppercase text-slate-500">Slot ${i+1}: ${state.titles[i]}</label>
-                            </div>
-                            <input type="url" class="site-input w-full px-4 py-2.5 bg-slate-800 border border-white/5 rounded-xl text-xs font-mono text-slate-300 focus:border-accent/50 outline-none" value="${s}" placeholder="https://...">
-                        </div>
-                    `;
-                });
-                applyThemeStyles();
-            }
-        };
-
-        window.applySettings = () => {
-            const inputs = document.querySelectorAll('.site-input');
-            const newSites = Array.from(inputs).map(i => i.value);
-            
-            // Auto-update titles and icons based on new sites
-            newSites.forEach((url, i) => {
-                if (url !== state.sites[i]) {
-                    const info = getInfoFromUrl(url);
-                    state.sites[i] = url;
-                    state.titles[i] = info.title;
-                    state.icons[i] = info.icon;
-                }
+        function renderNav() {
+            const container = document.getElementById('nav-slots');
+            container.innerHTML = '';
+            state.sites.forEach((s, i) => {
+                const btn = document.createElement('button');
+                btn.className = `w-full flex items-center p-3 rounded-xl border transition-all ${state.activeIdx === i ? 'active-nav' : 'bg-white/5 border-transparent'}`;
+                btn.onclick = () => setActiveSite(i);
+                btn.innerHTML = `<span class="text-[11px] font-bold">${state.titles[i]}</span>`;
+                container.appendChild(btn);
             });
+        }
 
-            updateState();
-            renderNav();
-            toggleSettings();
-            setActiveSite(state.activeIdx);
-            showToast("Navigation updated.");
-        };
-
-        window.analyzeSite = async () => {
-            const panel = document.getElementById('ai-panel');
-            const content = document.getElementById('ai-content');
-            panel.classList.remove('hidden');
-            content.textContent = "Requesting analysis of " + state.titles[state.activeIdx] + "...";
-            setTimeout(() => {
-                content.innerHTML = `
-                    <div class='mb-2 font-bold text-accent'>Analysis Summary:</div>
-                    Currently viewing ${state.titles[state.activeIdx]}. This portal provides real-time data for your RASKAM workspace.
-                `;
-            }, 1000);
-        };
-
-        window.toggleAi = () => document.getElementById('ai-panel').classList.toggle('hidden');
+        window.refreshFrame = () => { document.getElementById('main-frame').src += ''; };
+        window.openExternal = () => { window.open(state.sites[state.activeIdx], '_blank'); };
+        window.analyzeSite = () => { showToast("Analyzing site..."); };
 
         window.onload = () => {
-            applyThemeStyles();
+            setTheme(state.theme || 'dark');
+            setAccent(state.accent || '#4f46e5');
             initCalendar();
             initCalc();
+            initWorldClock();
+            initCurrency();
+            updateHealthDisplay();
+            
+            // Set initial tool
+            document.getElementById('tool-selector').value = state.activeTool || 'world-time';
+            switchTool(state.activeTool || 'world-time');
+            
             renderNav();
             renderHistory();
-            document.getElementById('scratchpad').value = state.notes || "";
             
-            const isVividh = state.titles[state.activeIdx].toLowerCase().includes("vividh bharati");
-            if (!isVividh) {
-                setActiveSite(state.activeIdx);
+            // Initial load of the current active site in the display
+            const initialUrl = state.sites[state.activeIdx];
+            document.getElementById('current-url-display').textContent = initialUrl;
+            
+            // Special handling for initial load: if radio is active, load a default or the radio depending on user preference
+            // For dashboard utility, we load the site into the frame if it's not the radio
+            if (!initialUrl.includes('akashvani')) {
+                document.getElementById('main-frame').src = initialUrl;
             } else {
-                setActiveSite(0);
+                // If the radio is "active" on load, load the first non-radio site to the frame
+                const firstNonRadioIdx = state.sites.findIndex(s => !s.includes('akashvani'));
+                if (firstNonRadioIdx !== -1) {
+                    document.getElementById('main-frame').src = state.sites[firstNonRadioIdx];
+                }
             }
-
-            const unitIn = document.getElementById('unit-input');
-            const unitFrom = document.getElementById('unit-from');
-            const unitRes = document.getElementById('unit-result');
+            
+            const scratch = document.getElementById('scratchpad');
+            scratch.value = state.notes || "";
+            scratch.oninput = (e) => { state.notes = e.target.value; localStorage.setItem('omni_dashboard_state', JSON.stringify(state)); };
+            
             const runConvert = () => {
-                const v = parseFloat(unitIn.value);
-                if(isNaN(v)) { unitRes.textContent = "---"; return; }
-                let m = unitFrom.value === 'ft' ? v * 0.3048 : unitFrom.value === 'in' ? v * 0.0254 : v;
-                unitRes.textContent = `${m.toFixed(2)}m | ${(m/0.3048).toFixed(1)}ft | ${(m/0.0254).toFixed(1)}in`;
-            };
-            unitIn.oninput = runConvert;
-            unitFrom.onchange = runConvert;
+                const v = parseFloat(document.getElementById('unit-input').value);
+                const unit = document.getElementById('unit-from').value;
+                const res = document.getElementById('unit-result');
+                if(isNaN(v)) { res.innerHTML = "<span>-</span><span>-</span><span>-</span>"; return; }
+                
+                let meters = unit === 'ft' ? v * 0.3048 : unit === 'in' ? v * 0.0254 : v;
+                let feet = meters / 0.3048;
+                let inches = meters / 0.0254;
 
-            document.getElementById('scratchpad').oninput = (e) => {
-                state.notes = e.target.value;
-                updateState();
+                res.innerHTML = `
+                    <span class="flex flex-col items-center">
+                        <span class="text-[7px] text-slate-500 uppercase font-black">FT</span>
+                        <span>${feet.toFixed(1)}</span>
+                    </span>
+                    <span class="w-px h-4 bg-white/5 self-center"></span>
+                    <span class="flex flex-col items-center">
+                        <span class="text-[7px] text-slate-500 uppercase font-black">IN</span>
+                        <span>${inches.toFixed(1)}</span>
+                    </span>
+                    <span class="w-px h-4 bg-white/5 self-center"></span>
+                    <span class="flex flex-col items-center">
+                        <span class="text-[7px] text-slate-500 uppercase font-black">M</span>
+                        <span>${meters.toFixed(2)}</span>
+                    </span>
+                `;
             };
+            document.getElementById('unit-input').oninput = runConvert;
+            document.getElementById('unit-from').onchange = runConvert;
         };
     </script>
 </body>
