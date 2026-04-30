@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyTrack - Senior Friendly Medicine App</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --success: #059669;
+            --danger: #dc2626;
+            --warning: #d97706;
+            
+            /* High Contrast Time Colors */
+            --morning-bg: #fef3c7;
+            --morning-text: #92400e;
+            --afternoon-bg: #e0f2fe;
+            --afternoon-text: #075985;
+            --night-bg: #e0e7ff;
+            --night-text: #3730a3;
+
+            --slate-50: #f8fafc;
+            --slate-100: #f1f5f9;
+            --slate-200: #e2e8f0;
+            --slate-800: #1e293b;
+            --slate-900: #0f172a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--slate-50);
+            color: var(--slate-900);
+            line-height: 1.4;
+            padding-bottom: 100px;
+            font-size: 18px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 1.25rem;
+        }
+
+        header {
+            background: white;
+            border-bottom: 4px solid var(--slate-200);
+            padding: 1.5rem 1rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo h1 {
+            font-size: 1.75rem;
+            color: var(--primary);
+            font-weight: 900;
+        }
+
+        .date-sub {
+            font-size: 1rem;
+            color: var(--slate-800);
+            font-weight: 700;
+        }
+
+        .icon-btn {
+            background: var(--slate-100);
+            border: 2px solid var(--slate-200);
+            padding: 1rem;
+            cursor: pointer;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            background: var(--slate-900);
+            border-radius: 2rem;
+            padding: 1.5rem;
+            color: white;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        }
+
+        .percent-large {
+            font-size: 3rem;
+            font-weight: 900;
+            display: block;
+        }
+
+        .slot-group {
+            margin-bottom: 2.5rem;
+        }
+
+        .slot-header {
+            font-size: 1.4rem;
+            font-weight: 900;
+            padding: 0.75rem 1.25rem;
+            border-radius: 1rem 1rem 0 0;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slot-morning { background: var(--morning-bg); color: var(--morning-text); border-left: 8px solid var(--warning); }
+        .slot-afternoon { background: var(--afternoon-bg); color: var(--afternoon-text); border-left: 8px solid var(--primary); }
+        .slot-night { background: var(--night-bg); color: var(--night-text); border-left: 8px solid var(--night-text); }
+
+        .med-item {
+            background: white;
+            border: 3px solid var(--slate-200);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            margin-bottom: 1rem;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .med-item.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: var(--slate-100);
+            filter: grayscale(0.8);
+        }
+
+        .med-item.taken {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .med-item.missed {
+            border-color: var(--danger);
+            background: #fff5f5;
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0px rgba(220, 38, 38, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
+            100% { box-shadow: 0 0 0 0px rgba(220, 38, 38, 0); }
+        }
+
+        .missed-label {
+            color: var(--danger);
+            font-weight: 900;
+            font-size: 1.2rem;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .med-name {
+            font-size: 1.5rem;
+            font-weight: 800;
+            display: block;
+        }
+
+        .med-relation {
+            font-size: 1.1rem;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .giant-check {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--slate-200);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--slate-50);
+            flex-shrink: 0;
+        }
+
+        .taken .giant-check {
+            background: white;
+            border-color: white;
+            color: var(--success);
+        }
+
+        .alert-banner {
+            background: var(--danger);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 800;
+            text-align: center;
+            font-size: 1.2rem;
+            border: 4px solid #7f1d1d;
+        }
+
+        .report-banner {
+            background: var(--primary);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+            text-align: center;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 1.25rem;
+            font-size: 1.3rem;
+            border: 3px solid var(--slate-200);
+            border-radius: 1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .btn-giant {
+            width: 100%;
+            padding: 1.5rem;
+            font-size: 1.4rem;
+            font-weight: 900;
+            border-radius: 1.5rem;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+
+        .btn-green { background: var(--success); color: white; }
+        .btn-blue { background: var(--primary); color: white; }
+        .btn-gray { background: var(--slate-200); color: var(--slate-800); }
+
+        .hidden { display: none !important; }
+
+        .manage-card {
+            background: white;
+            border: 3px solid var(--slate-200);
+            padding: 1.5rem;
+            border-radius: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .lock-notice {
+            font-size: 0.9rem;
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin-top: 5px;
+            display: inline-block;
+            font-weight: 700;
+        }
+        
+        .help-text {
+            font-size: 0.9rem;
+            color: var(--slate-800);
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        /* Success Message Toast */
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--slate-900);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 2rem;
+            font-weight: 800;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-content">
+            <div>
+                <h1 id="app-title">MediTrack</h1>
+                <div class="date-sub" id="current-date">Today</div>
+            </div>
+            <button class="icon-btn" id="toggle-view-btn" style="width: 80px; height: 80px;">
+                <svg id="settings-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <svg id="back-icon" class="hidden" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m15 18-6-6 6-6"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="container">
+        <div id="missed-dose-banner" class="alert-banner hidden">
+            ⚠️ YOU HAVE MISSED A DOSE! PLEASE TAKE IT NOW.
+        </div>
+
+        <div id="stock-alert-banner" class="alert-banner hidden" style="background: var(--warning); border-color: #92400e;">
+            ⚠️ LOW STOCK! PLEASE RESTOCK SOON.
+        </div>
+
+        <div id="report-notification" class="report-banner hidden">
+            <div>
+                <p style="font-size: 1.5rem; font-weight: 900;">Daily Summary Ready</p>
+                <p>Send medication report to contacts via Gmail?</p>
+            </div>
+            <!-- Directly using an anchor styled as a button for maximum compatibility -->
+            <a id="send-report-btn" class="btn-giant btn-green" style="margin-bottom: 0; text-decoration: none; display: flex; align-items: center; justify-content: center; color: white;">
+                OPEN GMAIL REPORT
+            </a>
+        </div>
+
+        <div id="daily-view">
+            <div class="card">
+                <p style="font-weight: 800; font-size: 1.2rem;">TODAY'S SCORE</p>
+                <span class="percent-large" id="percent-text">0%</span>
+                <div style="background: rgba(255,255,255,0.2); height: 20px; border-radius: 10px; margin-top: 10px;">
+                    <div id="progress-bar" style="background: white; height: 100%; width: 0%; border-radius: 10px; transition: width 0.4s;"></div>
+                </div>
+            </div>
+
+            <div id="medicine-list-container"></div>
+        </div>
+
+        <div id="manage-view" class="hidden">
+            <h2 style="font-size: 2rem; margin-bottom: 1rem;">Settings</h2>
+            
+            <div class="manage-card">
+                <label style="font-size: 1.1rem; font-weight: 900;">Gmail Recipients</label>
+                <span class="help-text">Emails of family/doctor (separated by commas)</span>
+                <input type="email" id="report-email-input" placeholder="example@gmail.com, doctor@clinic.com" onchange="saveReportSettings()" multiple>
+                
+                <label style="font-size: 1.1rem; font-weight: 900;">Auto-Reporting Time</label>
+                <input type="time" id="report-time-input" onchange="saveReportSettings()">
+            </div>
+
+            <button class="btn-giant btn-blue" id="show-form-btn">
+                + ADD NEW MEDICINE
+            </button>
+
+            <div id="add-form" class="manage-card hidden">
+                <label>Medicine Name</label>
+                <input type="text" id="med-name-input" placeholder="e.g. Aspirin">
+                
+                <label>Time of Day</label>
+                <select id="med-time-input">
+                    <option>Morning</option>
+                    <option>Afternoon</option>
+                    <option>Night</option>
+                </select>
+
+                <label>Instruction</label>
+                <select id="med-relation-input">
+                    <option>Before Meal</option>
+                    <option>After Meal</option>
+                    <option>Before Bed</option>
+                </select>
+
+                <label>Total Pill Stock</label>
+                <input type="number" id="med-stock-input" value="30">
+
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn-giant btn-gray" id="cancel-form-btn">CANCEL</button>
+                    <button class="btn-giant btn-green" id="save-med-btn">SAVE</button>
+                </div>
+            </div>
+
+            <div id="manage-list-container"></div>
+        </div>
+    </main>
+
+    <div id="toast">Preparing Report...</div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let alarmInterval = null;
+
+        function playSharpTone() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+        }
+
+        function startAlarm() {
+            if (alarmInterval) return;
+            alarmInterval = setInterval(() => {
+                playSharpTone();
+                setTimeout(playSharpTone, 250);
+            }, 3000);
+        }
+
+        function stopAlarm() {
+            if (alarmInterval) {
+                clearInterval(alarmInterval);
+                alarmInterval = null;
+            }
+        }
+
+        // STORAGE: Local Only
+        const STORAGE_KEYS = {
+            MEDS: 'meds_local_v10',
+            EMAIL: 'email_local_v10',
+            TIME: 'time_local_v10',
+            LAST_REPORT: 'last_report_local_v10'
+        };
+
+        let medicines = JSON.parse(localStorage.getItem(STORAGE_KEYS.MEDS)) || [
+            { id: 1, name: 'Vitamin D', time: 'Morning', relation: 'After Breakfast', taken: false, stock: 5 },
+            { id: 2, name: 'Joint Care', time: 'Afternoon', relation: 'After Lunch', taken: false, stock: 12 },
+            { id: 3, name: 'Sleep Aid', time: 'Night', relation: 'Before Bed', taken: false, stock: 20 }
+        ];
+        
+        let reportEmail = localStorage.getItem(STORAGE_KEYS.EMAIL) || '';
+        let reportTime = localStorage.getItem(STORAGE_KEYS.TIME) || '21:00';
+        let lastReportDate = localStorage.getItem(STORAGE_KEYS.LAST_REPORT) || '';
+        let currentView = 'daily';
+
+        const cutoffs = { 'Morning': 11, 'Afternoon': 14, 'Night': 21 };
+
+        const dailyView = document.getElementById('daily-view');
+        const manageView = document.getElementById('manage-view');
+        const medListContainer = document.getElementById('medicine-list-container');
+        const manageListContainer = document.getElementById('manage-list-container');
+        const reportEmailInput = document.getElementById('report-email-input');
+        const reportTimeInput = document.getElementById('report-time-input');
+        const missedBanner = document.getElementById('missed-dose-banner');
+
+        function getCurrentTimePeriod() {
+            const hour = new Date().getHours();
+            if (hour < 12) return 'Morning';
+            if (hour < 17) return 'Afternoon';
+            return 'Night';
+        }
+
+        function isPeriodLocked(medPeriod) {
+            const current = getCurrentTimePeriod();
+            if (current === 'Morning') return medPeriod !== 'Morning';
+            if (current === 'Afternoon') return medPeriod === 'Night';
+            return false;
+        }
+
+        function render() {
+            renderDaily();
+            renderManage();
+            updateProgress();
+            checkReportTrigger();
+            checkAlerts();
+            saveData();
+            reportEmailInput.value = reportEmail;
+            reportTimeInput.value = reportTime;
+            const options = { weekday: 'long', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', options);
+        }
+
+        function isMissed(med) {
+            if (med.taken) return false;
+            const hour = new Date().getHours();
+            const cutoff = cutoffs[med.time];
+            return hour >= cutoff;
+        }
+
+        function renderDaily() {
+            medListContainer.innerHTML = '';
+            const config = [
+                { id: 'Morning', class: 'slot-morning', icon: '☀️' },
+                { id: 'Afternoon', class: 'slot-afternoon', icon: '🌤️' },
+                { id: 'Night', class: 'slot-night', icon: '🌙' }
+            ];
+            
+            config.forEach(slot => {
+                const meds = medicines.filter(m => m.time === slot.id);
+                if (meds.length === 0) return;
+
+                const group = document.createElement('div');
+                group.className = 'slot-group';
+                group.innerHTML = `<div class="slot-header ${slot.class}"><span>${slot.icon}</span> ${slot.id}</div>`;
+
+                meds.forEach(med => {
+                    const missed = isMissed(med);
+                    const locked = isPeriodLocked(med.time);
+                    const item = document.createElement('button');
+                    item.className = `med-item ${med.taken ? 'taken' : ''} ${missed ? 'missed' : ''} ${locked ? 'locked' : ''}`;
+                    if (!locked) item.onclick = () => toggleMed(med.id);
+
+                    item.innerHTML = `
+                        <div>
+                            <span class="med-name">${med.name}</span>
+                            <span class="med-relation">${med.relation}</span>
+                            ${missed ? '<span class="missed-label">⚠️ MISSED! TAKE NOW</span>' : ''}
+                            ${locked ? '<span class="lock-notice">Too early for this pill</span>' : ''}
+                            <div class="stock-info">Stock: ${med.stock} left</div>
+                        </div>
+                        <div class="giant-check">
+                            ${med.taken ? '✓' : (locked ? '🔒' : (missed ? '❗' : ''))}
+                        </div>
+                    `;
+                    group.appendChild(item);
+                });
+                medListContainer.appendChild(group);
+            });
+        }
+
+        function renderManage() {
+            manageListContainer.innerHTML = '';
+            medicines.forEach(med => {
+                const card = document.createElement('div');
+                card.className = 'manage-card';
+                card.style.display = 'flex';
+                card.style.justifyContent = 'space-between';
+                card.style.alignItems = 'center';
+                card.innerHTML = `
+                    <div>
+                        <p style="font-size: 1.3rem; font-weight: 800;">${med.name}</p>
+                        <p>${med.time} • Stock: ${med.stock}</p>
+                    </div>
+                    <button class="icon-btn" onclick="deleteMed(${med.id})" style="background: var(--danger); color: white; border: none; padding: 0.5rem 1rem;">DEL</button>
+                `;
+                manageListContainer.appendChild(card);
+            });
+        }
+
+        function updateProgress() {
+            const total = medicines.length;
+            const taken = medicines.filter(m => m.taken).length;
+            const percent = total === 0 ? 0 : Math.round((taken / total) * 100);
+            document.getElementById('percent-text').innerText = percent + '%';
+            document.getElementById('progress-bar').style.width = percent + '%';
+        }
+
+        function toggleMed(id) {
+            medicines = medicines.map(m => {
+                if (m.id === id) {
+                    const willBeTaken = !m.taken;
+                    return {...m, taken: willBeTaken, stock: willBeTaken ? Math.max(0, m.stock - 1) : m.stock + 1};
+                }
+                return m;
+            });
+            render();
+        }
+
+        function deleteMed(id) {
+            if(confirm("Delete this medicine?")) {
+                medicines = medicines.filter(m => m.id !== id);
+                render();
+            }
+        }
+
+        function checkAlerts() {
+            const hasMissed = medicines.some(m => isMissed(m));
+            missedBanner.classList.toggle('hidden', !hasMissed);
+            if (hasMissed) startAlarm(); else stopAlarm();
+        }
+
+        function checkReportTrigger() {
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            const [h, m] = reportTime.split(':').map(Number);
+            const isTime = (now.getHours() > h) || (now.getHours() === h && now.getMinutes() >= m);
+            
+            const banner = document.getElementById('report-notification');
+            if (isTime && reportEmail && lastReportDate !== today) {
+                banner.classList.remove('hidden');
+                updateGmailLink(); // Ensure link is ready
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
+
+        // IMPROVED GMAIL LOGIC
+        function updateGmailLink() {
+            const reportBtn = document.getElementById('send-report-btn');
+            if (!reportEmail) return;
+
+            const today = new Date().toLocaleDateString();
+            let reportData = `Daily Medication Adherence Report - ${today}\n\n`;
+            
+            medicines.forEach(m => {
+                reportData += `${m.taken ? '✓ TAKEN' : '✗ MISSED'} : ${m.name} (${m.time}) - Stock Remaining: ${m.stock}\n`;
+            });
+
+            const lowStock = medicines.filter(m => m.stock < 5);
+            if (lowStock.length > 0) {
+                reportData += `\n⚠️ LOW STOCK ALERT:\n`;
+                lowStock.forEach(l => reportData += `- ${l.name}: only ${l.stock} left\n`);
+            }
+
+            reportData += `\nReport generated locally by MediTrack.`;
+
+            const recipients = reportEmail.replace(/\s/g, '');
+            const subject = `MediTrack Report - ${today}`;
+            
+            // Gmail Web Compose URL (Mobile & Desktop friendly)
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipients)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(reportData)}`;
+            
+            reportBtn.href = gmailUrl;
+            reportBtn.target = "_blank";
+            
+            // Use an onclick to mark as reported even if they don't actually click send in Gmail
+            reportBtn.onclick = () => {
+                lastReportDate = new Date().toISOString().split('T')[0];
+                localStorage.setItem(STORAGE_KEYS.LAST_REPORT, lastReportDate);
+                setTimeout(render, 1000);
+            };
+        }
+
+        function saveReportSettings() {
+            reportEmail = reportEmailInput.value;
+            reportTime = reportTimeInput.value;
+            localStorage.setItem(STORAGE_KEYS.EMAIL, reportEmail);
+            localStorage.setItem(STORAGE_KEYS.TIME, reportTime);
+            updateGmailLink();
+            render();
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEYS.MEDS, JSON.stringify(medicines));
+        }
+
+        document.getElementById('toggle-view-btn').onclick = () => {
+            currentView = (currentView === 'daily') ? 'manage' : 'daily';
+            dailyView.classList.toggle('hidden', currentView !== 'daily');
+            manageView.classList.toggle('hidden', currentView !== 'manage');
+            document.getElementById('settings-icon').classList.toggle('hidden', currentView !== 'daily');
+            document.getElementById('back-icon').classList.toggle('hidden', currentView !== 'manage');
+            document.getElementById('app-title').innerText = currentView === 'daily' ? 'MediTrack' : 'Settings';
+        };
+
+        document.getElementById('show-form-btn').onclick = () => document.getElementById('add-form').classList.remove('hidden');
+        document.getElementById('cancel-form-btn').onclick = () => document.getElementById('add-form').classList.add('hidden');
+
+        document.getElementById('save-med-btn').onclick = () => {
+            const name = document.getElementById('med-name-input').value;
+            if(!name) return;
+            medicines.push({
+                id: Date.now(),
+                name,
+                time: document.getElementById('med-time-input').value,
+                relation: document.getElementById('med-relation-input').value,
+                stock: parseInt(document.getElementById('med-stock-input').value) || 0,
+                taken: false
+            });
+            document.getElementById('med-name-input').value = '';
+            document.getElementById('add-form').classList.add('hidden');
+            render();
+        };
+
+        render();
+        setInterval(render, 30000); 
+    </script>
+</body>
+</html>
